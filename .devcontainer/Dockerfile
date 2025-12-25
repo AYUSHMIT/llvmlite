@@ -5,8 +5,7 @@ ARG DEBIAN_FRONTEND=noninteractive
 
 RUN apt-get update && \
     apt-get install -y wget gnupg lsb-release software-properties-common && \
-    wget https://apt.llvm.org/llvm-snapshot.gpg.key -O /tmp/llvm.key && \
-    apt-key add /tmp/llvm.key && \
+    wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc && \
     add-apt-repository "deb http://apt.llvm.org/$(lsb_release -cs)/ llvm-toolchain-$(lsb_release -cs)-15 main" && \
     apt-get update && \
     apt-get install -y \
