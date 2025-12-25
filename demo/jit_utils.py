@@ -1,9 +1,18 @@
 import llvmlite.binding as llvm
 
-# Initialize LLVM
-llvm.initialize()
-llvm.initialize_native_target()
-llvm.initialize_native_asmprinter()  # required for JIT
+# Initialize LLVM (deprecated in newer versions, but kept for compatibility)
+try:
+    llvm.initialize()
+except RuntimeError:
+    # Newer versions of llvmlite handle initialization automatically
+    pass
+
+# Initialize native target (required for JIT)
+try:
+    llvm.initialize_native_target()
+    llvm.initialize_native_asmprinter()
+except RuntimeError:
+    pass
 
 def create_execution_engine():
     """

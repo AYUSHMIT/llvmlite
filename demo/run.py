@@ -2,13 +2,30 @@
 import argparse
 import ctypes
 import os
+import sys
 import time
 from typing import Tuple
 
-import numpy as np
-import matplotlib
-matplotlib.use('Agg')  # Use non-interactive backend
-import matplotlib.pyplot as plt
+# Only add to path if we can't already import demo
+try:
+    import demo.jit_utils
+except ImportError:
+    # Add parent directory to path to support script execution from repo root
+    sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
+
+try:
+    import matplotlib
+    matplotlib.use('Agg')  # Use non-interactive backend
+    import matplotlib.pyplot as plt
+    MATPLOTLIB_AVAILABLE = True
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
 
 from demo.jit_utils import create_execution_engine, compile_ir, get_function_address
 from demo.kernels import build_add_i32_module, build_sum_array_module
@@ -38,10 +55,14 @@ def demo_add(engine):
     res = cfunc(7, 35)
     print(f"add(7,35) JIT -> {res}")
 
-def py_sum(arr: np.ndarray) -> float:
+def py_sum(arr) -> float:
+    if not NUMPY_AVAILABLE:
+        raise ImportError("NumPy is required for benchmarking")
     return float(np.sum(arr))
 
-def jit_sum(engine, arr: np.ndarray) -> float:
+def jit_sum(engine, arr) -> float:
+    if not NUMPY_AVAILABLE:
+        raise ImportError("NumPy is required for benchmarking")
     ir_text = build_sum_array_module()
     save_ir("sum", ir_text)
     compile_ir(engine, ir_text)
@@ -53,6 +74,11 @@ def jit_sum(engine, arr: np.ndarray) -> float:
     return cfunc(ptr, arr.size)
 
 def benchmark_sum(engine, n: int = 1_000_000, trials: int = 5) -> Tuple[float, float]:
+    if not NUMPY_AVAILABLE:
+        raise ImportError("NumPy is required for benchmarking")
+    if not MATPLOTLIB_AVAILABLE:
+        raise ImportError("Matplotlib is required for plotting")
+    
     arr = np.random.rand(n).astype(np.float64)
 
     # Warmup
@@ -110,9 +136,17 @@ def main():
     if args.generate_only:
         # Save sum IR without running
         save_ir("sum", build_sum_array_module())
+        print("[*] IR generation complete!")
+        return
+
+    if not NUMPY_AVAILABLE:
+        print("NumPy is not installed. Install it to run benchmarks: pip install numpy matplotlib")
         return
 
     if args.benchmark:
+        if not MATPLOTLIB_AVAILABLE:
+            print("Matplotlib is not installed. Install it for plotting: pip install matplotlib")
+            return
         py_t, jit_t = benchmark_sum(engine)
         print(f"Python mean: {py_t:.6f}s; JIT mean: {jit_t:.6f}s; Speedup: {py_t/jit_t:.2f}x")
     else:
